@@ -1,11 +1,11 @@
 Demo Zotonic vagrant installation
 =================================
 
-This sets up a basic Zotonic installation based on Ubuntu 13.10 (saucy).
+This sets up a basic Zotonic installation based on Ubuntu 14.0 (trusty).
 
-First make sure you have the saucy32 box by running:
+First make sure you have the trusty64 box by running:
 
-    vagrant box add --name saucy32 http://cloud-images.ubuntu.com/vagrant/saucy/current/saucy-server-cloudimg-i386-vagrant-disk1.box
+    vagrant box add trusty64 http://cloud-images.ubuntu.com/vagrant/trusty/trusty-server-cloudimg-amd64-juju-vagrant-disk1.box
 
 Then run:
 
