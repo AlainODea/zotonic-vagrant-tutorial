@@ -76,12 +76,14 @@ fi
 # now build it...
 cd /zotonic
 git checkout $ZOTONIC_RELEASE
+# Patch for #889
+curl https://raw.githubusercontent.com/AlainODea/zotonic/c09c28cc0cc715e46d5536278c714ee6dc3d676c/src/scripts/zotonic-modules > src/scripts/zotonic-modules
 make
 
 chown vagrant:vagrant /zotonic -R
 
 # and start!
-sudo -u vagrant -i /zotonic/bin/zotonic start
+sudo -E -u vagrant -i /zotonic/bin/zotonic start
 
 CONFIG=$(find $HOME/.zotonic -name zotonic.config | head -n 1)
 while [ ! -f $CONFIG ]
@@ -91,19 +93,39 @@ done
 PASSWORD=`cat $CONFIG | grep {password | sed -E 's/^\s\{\s*password\s*,\s*"(.*?)".*/\1/'`
 
 /zotonic/bin/zotonic modules activate \
+    --site verafin \
     mod_rest mod_base_site mod_admin_frontend \
     mod_admin_modules mod_authentication mod_acl_adminonly \
     mod_mqtt mod_editor_tinymce
 
-if wget -q -O /dev/null http://localhost:8000/; then
-    echo "
+echo "
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Zotonic has been successfully installed:
 - Visit http://localhost:8000/ to see the sites administration page.
 - The password for login to this page is $PASSWORD
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-else
-    echo "Error running Zotonic!"
-    # run debug mode to see whats going on
-    sudo -u vagrant -i /zotonic/bin/zotonic debug
-fi
+
+cat > /etc/init.d/zotonic <'EOF'
+#!/bin/sh -e
+
+### BEGIN INIT INFO
+# Provides:             zotonic
+# Required-Start:       $local_fs $remote_fs $network $time postgresql
+# Required-Stop:        $local_fs $remote_fs $network $time postgresql
+# Should-Start:
+# Should-Stop:
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    Zotonic
+### END INIT INFO
+
+# Set any environment variables here, e.g.:
+TZ='America/New_York'; export TZ
+export ZOTONIC_PORT=80
+export ZOTONIC_PORT_SSL=443
+export ZOTONIC_IP=`/sbin/ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`
+
+/usr/bin/sudo -u zotonic -i authbind --deep /home/zotonic/zotonic/bin/zotonic $@
+EOF
+chmod +x /etc/init.d/zotonic
+update-rc.d zotonic defaults
